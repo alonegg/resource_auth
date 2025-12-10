@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ _('Decrypt Trace Info') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+    <div class="position-absolute top-0 end-0 p-3">
+        {% if lang == 'zh' %}
+        <a href="/set-language/en?next_url={{ request.url }}" class="text-muted text-decoration-none">English</a>
+        {% else %}
+        <a href="/set-language/zh?next_url={{ request.url }}" class="text-muted text-decoration-none">中文</a>
+        {% endif %}
+    </div>
+    <div class="container mt-5">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ _('Decrypt Trace Info') }}</h5>
+                <a href="/admin/dashboard" class="btn btn-sm btn-outline-light">{{ _('Back to Dashboard') }}</a>
+            </div>
+            <div class="card-body">
+                <form action="/admin/tools/decrypt" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Upload Encrypted File (e.g. lic.dat)') }}</label>
+                        <input type="file" name="file" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">{{ _('Decrypt') }}</button>
+                </form>
+
+                {% if result %}
+                <hr>
+                <h5>{{ _('Decrypted Result:') }}</h5>
+                {% if result.error %}
+                <div class="alert alert-danger">{{ result.error }}</div>
+                {% else %}
+                <table class="table table-bordered">
+                    <tr>
+                        <th>{{ _('User ID (DB)') }}</th>
+                        <td>{{ result.uid }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ _('Name') }}</th>
+                        <td>{{ result.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ _('Username (SWUFE UID)') }}</th>
+                        <td>{{ result.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ _('Department') }}</th>
+                        <td>{{ result.dept }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ _('Application ID') }}</th>
+                        <td>{{ result.apply_id }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ _('Apply Time (Approved)') }}</th>
+                        <td>{{ result.apply_time }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ _('Download Time') }}</th>
+                        <td>{{ result.timestamp }}</td>
+                    </tr>
+                </table>
+                <pre class="bg-light p-3 border">{{ result | tojson(indent=2) }}</pre>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

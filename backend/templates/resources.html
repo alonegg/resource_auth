@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ _('Experimental Teaching Resource Authorization Platform') }} Resources</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --card-border-radius: 12px;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            --card-hover-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --primary-color: #0d6efd;
+        }
+
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .nav-link {
+            color: #6c757d;
+            font-weight: 500;
+            border: none !important;
+            padding: 10px 20px;
+            transition: color 0.2s;
+        }
+
+        .nav-link.active {
+            color: var(--primary-color) !important;
+            border-bottom: 2px solid var(--primary-color) !important;
+            background: transparent !important;
+        }
+
+        .resource-card {
+            border: none;
+            border-radius: var(--card-border-radius);
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            background: white;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .resource-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+
+        .card-title:hover {
+            color: var(--primary-color);
+        }
+
+        .card-desc-wrapper {
+            position: relative;
+            flex-grow: 1; /* Pushes footer down if needed */
+            margin-bottom: 1rem;
+        }
+
+        .card-desc-content {
+            max-height: 4.8em; /* Show approx 3-4 lines */
+            overflow: hidden;
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .card-desc-mask {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2em;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+            pointer-events: none;
+        }
+
+        .read-more-link {
+            font-size: 0.85rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .read-more-link:hover {
+            text-decoration: underline;
+        }
+
+        .action-area {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid #f1f1f1;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">{{ _('Experimental Teaching Resource Authorization Platform') }}</a>
+            <div class="d-flex text-white align-items-center">
+                <!-- Lang Switcher -->
+                <div class="me-3">
+                    {% if lang == 'zh' %}
+                    <a href="/set-language/en?next_url={{ request.url }}"
+                        class="text-white small text-decoration-none">English</a>
+                    {% else %}
+                    <a href="/set-language/zh?next_url={{ request.url }}"
+                        class="text-white small text-decoration-none">中文</a>
+                    {% endif %}
+                </div>
+
+                {% if user %}
+                <span class="me-3">Hi, {{ user.name }}</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm">{{ _('Logout') }}</a>
+                {% else %}
+                <a href="/login/sso?next_url={{ request.url }}" class="btn btn-outline-light btn-sm me-2">{{ _('Login
+                    via SWUFE Unified Auth') }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Dashboard -->
+        {% if user %}
+        <h4>{{ _('My Resources') }}</h4>
+        <div class="row mb-5">
+            {% for resource in resources %}
+            {% if resource.id in app_map and app_map[resource.id].status == 'APPROVED' %}
+            <div class="col-md-4 mb-4">
+                <div class="resource-card" style="border-top: 4px solid #198754;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title text-success mb-0" onclick='showDetails({{ resource.id }}, {{ resource.name|tojson|forceescape }}, {{ resource.description|tojson|forceescape }})'>{{ resource.name }}</h5>
+                            <span class="badge bg-success status-badge">{{ _('Active') }}</span>
+                        </div>
+                        <p class="text-muted small mb-3">{{ _(resource.category) }}</p>
+
+                        <div class="action-area border-0 pt-0 mt-auto">
+
+                        {% if resource.auth_type == 'AUTO_ZIP' %}
+                        <a href="/resources/{{ resource.id }}/download" class="btn btn-primary w-100">{{ _('Download
+                            License') }}</a>
+                        <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
+                            app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
+
+                        {% elif resource.auth_type == 'AUTO_CODE' %}
+                        <!-- Auto-Generated Code Mode -->
+                        <div class="alert alert-warning p-2 mb-0">
+                            <strong>{{ _('License Key') }}:</strong><br>
+                            <div class="input-group input-group-sm mt-1">
+                                <input type="text" class="form-control" value="{{ app_map[resource.id].auth_output.get('code', 'N/A') }}" readonly id="code-{{ resource.id }}">
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyCode('code-{{ resource.id }}')">{{ _('Copy') }}</button>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
+                            app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
+                        {% if resource.config.instruction_text %}
+                        <a href="#" class="d-block mt-1 small" onclick='showDetails({{ resource.id }}, {{ resource.name|tojson|forceescape }}, {{ resource.config.instruction_text|tojson|forceescape }})'>{{ _('View Activation Guide') }}</a>
+                        {% endif %}
+
+                        {% elif resource.config.static_code %}
+                        <!-- Stata/Code Mode -->
+                        <div class="alert alert-secondary p-2 mb-0">
+                            <strong>{{ _('License Code') }}:</strong><br>
+                            <code>{{ resource.config.static_code | safe }}</code>
+                        </div>
+                        <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
+                            app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
+
+                        {% elif resource.config.instruction_text %}
+                        <!-- Matlab/Guide Mode -->
+                        <div class="alert alert-info p-2 mb-0">
+                            <strong>{{ _('Activation Guide') }}:</strong><br>
+                            <span style="white-space: pre-line;">{{ resource.config.instruction_text }}</span>
+                        </div>
+                        <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
+                            app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
+
+                        {% elif resource.auth_type == 'MANUAL' %}
+                        <div class="alert alert-success p-2 small">{{ _('Refer to email for access instructions.') }}</div>
+                        {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            {% if not app_map %}
+            <div class="col-12">
+                <p class="text-muted">{{ _('No approved resources yet.') }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <hr>
+        {% endif %}
+
+        <!-- Catalog Tabs -->
+        <h4>{{ _('Resource Catalog') }}</h4>
+        <ul class="nav nav-tabs mb-4" id="resourceTabs" role="tablist">
+            {% set cats = ['Software', 'Compute', 'Data', 'Teaching'] %}
+            {% for cat in cats %}
+            <li class="nav-item">
+                <button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab"
+                    data-bs-target="#tab-{{ loop.index }}">
+                    {{ _(cat) }}
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="tab-content">
+            {% for cat in cats %}
+            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="tab-{{ loop.index }}">
+                <div class="row">
+                    {% for resource in resources if resource.category == cat %}
+                    {% set app = app_map.get(resource.id) %}
+                    <div class="col-md-4 mb-4">
+                        <div class="resource-card">
+                            <div class="card-body">
+                                <h5 class="card-title"
+                                    onclick='showDetails({{ resource.id }}, {{ resource.name|tojson|forceescape }}, {{ resource.description|tojson|forceescape }})'>
+                                    {{ resource.name }}</h5>
+                                
+                                <div class="card-desc-wrapper">
+                                    <div class="card-desc-content">
+                                        {{ resource.description | safe }}
+                                    </div>
+                                    <div class="card-desc-mask"></div>
+                                </div>
+                                <div>
+                                    <a class="read-more-link" onclick='showDetails({{ resource.id }}, {{ resource.name|tojson|forceescape }}, {{ resource.description|tojson|forceescape }})'>{{ _('View Details') }} &raquo;</a>
+                                </div>
+
+                                <div class="action-area">
+                                    {% if user %}
+                                    {% if not app %}
+                                    <button class="btn btn-primary w-100 apply-btn" data-id="{{ resource.id }}"
+                                        data-schema='{{ resource.form_schema|tojson }}'>
+                                        {{ _('Apply for Usage') }}
+                                    </button>
+                                    {% if resource.auth_type == 'AUTO_ZIP' or resource.auth_type == 'AUTO_CODE' %}
+                                    <div class="mt-2 text-center small text-success"><i class="bi bi-lightning-fill"></i> {{
+                                        _('Instant Approval') }}</div>
+                                    {% endif %}
+                                    {% elif app.status == 'PENDING' %}
+                                    <button class="btn btn-warning w-100" disabled>{{ _('Pending Approval...')
+                                        }}</button>
+                                    {% elif app.status == 'APPROVED' %}
+                                    <button class="btn btn-success w-100" disabled>{{ _('Already Authorized')
+                                        }}</button>
+                                    {% elif app.status == 'REVOKED' or app.status == 'REJECTED' or app.status == 'EXPIRED' %}
+                                    <button class="btn btn-primary w-100 apply-btn" data-id="{{ resource.id }}"
+                                        data-schema='{{ resource.form_schema|tojson }}'>
+                                        {{ _('Re-apply') }}
+                                    </button>
+                                    <div class="mt-2 text-center small text-danger">{{ _('Previous Status') }}: {{ app.status }}</div>
+                                    {% if app.status == 'REJECTED' and app.auth_output and app.auth_output.rejection_reason %}
+                                    <div class="mt-1 alert alert-danger p-2 small mb-0">
+                                        <strong>{{ _('Reason') }}:</strong> {{ app.auth_output.rejection_reason }}
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
+                                    {% else %}
+                                    <a href="/login/sso?next_url={{ request.url }}"
+                                        class="btn btn-outline-primary w-100">{{ _('Login via SWUFE Unified Auth')
+                                        }}</a>
+                                    <div class="mt-2 text-center small text-muted">{{ _('Authentication required') }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                        <p class="text-muted">No resources available in this category.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Dynamic Application Modal -->
+    <div class="modal fade" id="applyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="applyForm" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ _('Apply for Resource') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="modalDescription" class="mb-3 text-muted small"></div>
+                        <div id="dynamicFields">
+                            <!-- JS will inject fields here -->
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Usage Description') }}</label>
+                            <textarea name="user_input_desc" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel')
+                            }}</button>
+                        <button type="submit" class="btn btn-primary">{{ _('Submit Application') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div class="modal fade" id="detailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailsTitle">resource name</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="detailsContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+                    <!-- Optional: Add Apply button here too? For now keep it simple -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalEl = document.getElementById('applyModal');
+            const modal = new bootstrap.Modal(modalEl);
+            window.detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+            document.querySelectorAll('.apply-btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const resourceId = this.getAttribute('data-id');
+                    const schema = JSON.parse(this.getAttribute('data-schema'));
+
+                    const form = document.getElementById('applyForm');
+                    form.action = `/resources/${resourceId}/apply`;
+
+                    const container = document.getElementById('dynamicFields');
+                    container.innerHTML = '';
+
+                    // Default usage field if strict Schema is missing or empty
+                    if (!schema || !schema.fields || schema.fields.length === 0) {
+                        container.innerHTML = `
+                            <div class="mb-3">
+                                <label class="form-label">{{ _('Usage Description') }}</label>
+                                <textarea name="usage_desc" class="form-control" rows="3" required></textarea>
+                            </div>`;
+                    } else {
+                        schema.fields.forEach(field => {
+                            let html = `<div class="mb-3"><label class="form-label">${field.label}</label>`;
+
+                            if (field.type === 'textarea') {
+                                html += `<textarea name="${field.name}" class="form-control" rows="3" ${field.required ? 'required' : ''}></textarea>`;
+                            } else if (field.type === 'select') {
+                                html += `<select name="${field.name}" class="form-control" ${field.required ? 'required' : ''}>`;
+                                field.options.forEach(opt => {
+                                    html += `<option value="${opt}">${opt}</option>`;
+                                });
+                                html += `</select>`;
+                            } else {
+                                html += `<input type="${field.type}" name="${field.name}" class="form-control" ${field.required ? 'required' : ''}>`;
+                            }
+
+                            html += `</div>`;
+                            container.innerHTML += html;
+                        });
+                    }
+
+                    modal.show();
+                });
+            });
+        });
+
+        function showDetails(id, name, desc) {
+            document.getElementById('detailsTitle').innerText = name;
+            document.getElementById('detailsContent').innerHTML = desc; // rich text
+            window.detailsModal.show();
+        }
+
+        function copyCode(elementId) {
+            var copyText = document.getElementById(elementId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); 
+            navigator.clipboard.writeText(copyText.value);
+            // Optional: Show tooltip or feedback
+        }
+    </script>
+</body>
+
+</html><script>
+    // Update modal title for re-application
+    document.querySelectorAll('.apply-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.innerText.includes('Re-apply')) {
+                document.querySelector('#applyModal .modal-title').innerText = '{{ _("Re-apply for Resource") }}';
+            } else {
+                document.querySelector('#applyModal .modal-title').innerText = '{{ _("Apply for Resource") }}';
+            }
+        });
+    });
+</script>

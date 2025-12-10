@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ _('Experimental Teaching Resource Authorization Platform') }} Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .json-pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .text-truncate-multiline {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 4.5em;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">{{ _('Experimental Teaching Resource Authorization Platform') }} <small class="fw-light">{{ _('Admin Console') }}</small></a>
+            <!-- Lang Switcher -->
+            <div class="d-flex text-white align-items-center">
+                <div class="me-3">
+                    {% if lang == 'zh' %}
+                    <a href="/set-language/en?next_url={{ request.url }}"
+                        class="text-white small text-decoration-none">English</a>
+                    {% else %}
+                    <a href="/set-language/zh?next_url={{ request.url }}"
+                        class="text-white small text-decoration-none">中文</a>
+                    {% endif %}
+                </div>
+                {% if user %}
+                <span class="me-3">Hi, {{ user.name }} (Admin)</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm">{{ _('Logout') }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar / Quick Stats -->
+            <div class="col-md-2 bg-light p-3 min-vh-100">
+                <h5 class="mb-3">{{ _('Admin Console') }}</h5>
+                <div class="list-group mb-4">
+                    <a href="#" class="list-group-item list-group-item-action active">{{ _('Pending Approvals') }}
+                        {% if pending_count > 0 %}
+                        <span class="badge bg-danger float-end">{{ pending_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">{{ _('Active Resources') }}</a>
+                    <a href="#" class="list-group-item list-group-item-action">{{ _('Total Requests') }}</a>
+                    <a href="/admin/users" class="list-group-item list-group-item-action">{{ _('User Management') }}</a>
+                    <a href="/admin/tools/decrypt"
+                        class="list-group-item list-group-item-action list-group-item-warning">{{ _('Decrypt Tool')
+                        }}</a>
+                </div>
+
+                <div class="card bg-white mb-3">
+                    <div class="card-body p-2">
+                        <small class="text-muted d-block">{{ _('Total Requests') }}</small>
+                        <h3>{{ stats.total_requests }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-approvals">{{
+                            _('Pending Approvals') }}</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-resources">{{ _('Resource
+                            Configuration') }}</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-stats">{{ _('Statistics') }}</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-analytics">{{ _('Resource')
+                            }} {{ _('Details') }}</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- TAB 1: Approvals -->
+                    <div class="tab-pane fade show active" id="tab-approvals">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>{{ _('App ID') }}</th>
+                                            <th>{{ _('Priority') }}</th>
+                                            <th>{{ _('User Info') }}</th>
+                                            <th>{{ _('Resource') }}</th>
+                                            <th>{{ _('Submission Details') }}</th>
+                                            <th>{{ _('Time') }}</th>
+                                            <th>{{ _('Actions') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for app in applications %}
+                                        <tr>
+                                            <td>#{{ app.id }}</td>
+                                            <td>
+                                                {% if app.resource.category == 'Calculate' %}
+                                                <span class="badge bg-danger">{{ _('HIGH') }}</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">{{ _('NORMAL') }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <strong>{{ app.user.name }}</strong><br>
+                                                <small class="text-muted">{{ app.user.dept }}</small>
+                                            </td>
+                                            <td>{{ app.resource.name }}</td>
+                                            <td>
+                                                <small>
+                                                    {% for k, v in app.user_input.items() %}
+                                                    <b>{{ k }}:</b> {{ v }}<br>
+                                                    {% endfor %}
+                                                </small>
+                                            </td>
+                                            <td>{{ app.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>
+                                                <form action="/admin/approve/{{ app.id }}" method="post"
+                                                    class="d-inline">
+                                                    <button class="btn btn-success btn-sm me-1">{{ _('Approve') }}</button>
+                                                </form>
+                                                <button class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                                                    data-bs-target="#rejectModal" data-appid="{{ app.id }}"
+                                                    onclick="setRejectId({{ app.id }})">{{ _('Reject') }}</button>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">{{ _('No pending
+                                                applications') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Resources -->
+                    <div class="tab-pane fade" id="tab-resources">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h6 class="mb-0">{{ _('Resource Configuration') }}</h6>
+                            <a href="/admin/resources/new" class="btn btn-primary btn-sm">+ {{ _('New Resource Wizard')
+                                }}</a>
+                        </div>
+
+                        <!-- Group by Category -->
+                        {% set cats = ['Software', 'Compute', 'Data', 'Teaching'] %}
+                        {% for cat in cats %}
+                        <div class="card mb-4 border-0">
+                            <div class="card-header bg-transparent fw-bold border-bottom">{{ _(cat) }}</div>
+                            <div class="card-body p-0 pt-3">
+                                <div class="row">
+                                    {% for res in resources if res.category == cat %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100 shadow-sm">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="card-title fw-bold">{{ res.name }}</h6>
+                                                    <span class="badge bg-light text-dark border">{{ res.auth_type
+                                                        }}</span>
+                                                </div>
+                                                {% if res.auth_type == 'AUTO_ZIP' and res.config.zip_path and not res.config.root_path %}
+                                                <div class="alert alert-warning p-1 small mb-2">
+                                                    <i class="bi bi-exclamation-triangle"></i> {{ _('Legacy Storage. Re-upload required.') }}
+                                                </div>
+                                                {% endif %}
+                                                <p class="card-text text-truncate-multiline small text-muted">
+                                                    {{ res.description | striptags }}
+                                                </p>
+                                            </div>
+                                            <div
+                                                class="card-footer bg-white border-top-0 d-flex justify-content-between">
+                                                <a href="/admin/resource/{{ res.id }}/edit"
+                                                    class="btn btn-outline-primary btn-sm">{{ _('Edit') }}</a>
+                                                <form action="/admin/resources/{{ res.id }}/delete" method="POST"
+                                                    class="d-inline" onsubmit="return confirm('{{ _('Are you sure?') }}');">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">{{
+                                                        _('Delete') }}</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="col-12">
+                                        <p class="text-muted small ps-3">{{ _('No resources available in this
+                                            category.') }}</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- TAB 3: Statistics -->
+                    <div class="tab-pane fade" id="tab-stats">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">{{ _('Statistics') }}</h5>
+                            <div class="d-flex gap-2">
+                                <input type="date" id="statsStartDate" class="form-control form-control-sm" title="{{ _('Start Date') }}">
+                                <span class="align-self-center">-</span>
+                                <input type="date" id="statsEndDate" class="form-control form-control-sm" title="{{ _('End Date') }}">
+                                <button class="btn btn-primary btn-sm" onclick="loadStats()">{{ _('Filter') }}</button>
+                            </div>
+                        </div>
+
+                        <!-- KPI Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-primary text-white h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ _('Total Authorizations') }}</h6>
+                                        <h2 class="display-4 fw-bold" id="kpiTotal">-</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-success text-white h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ _('Active Authorizations') }}</h6>
+                                        <h2 class="display-4 fw-bold" id="kpiActive">-</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-warning text-dark h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ _('Expiring Soon (7 Days)') }}</h6>
+                                        <h2 class="display-4 fw-bold" id="kpiExpiring">-</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="card h-100">
+                                    <div class="card-header bg-white fw-bold">{{ _('Authorization Trends') }}</div>
+                                    <div class="card-body">
+                                        <canvas id="trendChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-white fw-bold">{{ _('Authorization Distribution') }}</div>
+                                    <div class="card-body">
+                                        <canvas id="distChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="card">
+                            <div class="card-header bg-white fw-bold">{{ _('Details by Category') }}</div>
+                            <div class="card-body p-0">
+                                <table class="table table-hover mb-0" id="statsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>{{ _('Category') }}</th>
+                                            <th class="text-end">{{ _('Count') }}</th>
+                                            <th class="text-end" style="width: 50%">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: Analytics (Original) -->
+                    <div class="tab-pane fade" id="tab-analytics">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="mb-0">{{ _('Top Requested Resources') }}</h6>
+                                        <hr>
+                                        <ul>
+                                            <!-- Stats logic in template is placeholder, using passed stats -->
+                                            {% for name, count in stats.top_resources %}
+                                            <li>{{ name }}: {{ count }} {{ _('requests') }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="mb-0">{{ _('Recent Audit Logs') }}</h6>
+                                        <hr>
+                                        <table class="table table-sm small">
+                                            <thead>
+                                                <tr>
+                                                    <th>{{ _('Time') }}</th>
+                                                    <th>{{ _('Admin') }}</th>
+                                                    <th>{{ _('Action') }}</th>
+                                                    <th>{{ _('Details') }}</th>
+                                                    <th>{{ _('IP') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for log in audit_logs %}
+                                                <tr>
+                                                    <td>{{ log.timestamp.strftime('%m-%d %H:%M') }}</td>
+                                                    <td>{{ log.user_id }}</td>
+                                                    <td>{{ log.action }}</td>
+                                                    <td>{{ log.details }}</td>
+                                                    <td>{{ log.ip_address }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="rejectForm" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ _('Reject Application') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>{{ _('Are you sure you want to reject this application?') }}</p>
+                        <div class="mb-3">
+                            <label class="form-label">{{ _('Reason for Rejection') }}</label>
+                            <textarea name="reason" class="form-control" required
+                                placeholder="{{ _('Not eligible...') }}"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel')
+                            }}</button>
+                        <button type="submit" class="btn btn-danger">{{ _('Reject Application') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // --- Stats Module ---
+        let trendChart = null;
+        let distChart = null;
+
+        async function loadStats() {
+            const startDate = document.getElementById('statsStartDate').value;
+            const endDate = document.getElementById('statsEndDate').value;
+            
+            let url = '/admin/stats/data';
+            const params = new URLSearchParams();
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (params.toString()) url += '?' + params.toString();
+            
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                renderStats(data);
+            } catch (e) {
+                console.error("Failed to load stats", e);
+            }
+        }
+
+        function renderStats(data) {
+            // 1. KPIs
+            document.getElementById('kpiTotal').innerText = data.total;
+            document.getElementById('kpiActive').innerText = data.active;
+            document.getElementById('kpiExpiring').innerText = data.expiring;
+            
+            // 2. Trend Chart (Line/Bar)
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            if (trendChart) trendChart.destroy();
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: data.trend.labels,
+                    datasets: [{
+                        label: '{{ _("New Authorizations") }}',
+                        data: data.trend.data,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
+            
+            // 3. Distribution Chart (Doughnut)
+            const distCtx = document.getElementById('distChart').getContext('2d');
+            if (distChart) distChart.destroy();
+            
+            const cats = Object.keys(data.distribution);
+            const counts = Object.values(data.distribution);
+            
+            distChart = new Chart(distCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: cats,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d', '#0dcaf0'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+            
+            // 4. Table
+            const tbody = document.querySelector('#statsTable tbody');
+            tbody.innerHTML = '';
+            
+            if (cats.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">{{ _("No data available") }}</td></tr>';
+            } else {
+                let total = counts.reduce((a, b) => a + b, 0);
+                cats.forEach((cat, idx) => {
+                    const count = counts[idx];
+                    const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                    const tr = `
+                        <tr>
+                            <td>${cat}</td>
+                            <td class="text-end">${count}</td>
+                            <td class="text-end text-muted small">${pct}%</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += tr;
+                });
+            }
+        }
+
+        function setRejectId(id) {
+            document.getElementById('rejectForm').action = '/admin/reject/' + id;
+        }
+
+        // Auto-switch tab based on URL param
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabName = urlParams.get('tab');
+            if (tabName === 'resources') {
+                const triggerEl = document.querySelector('#adminTabs button[data-bs-target="#tab-resources"]');
+                bootstrap.Tab.getInstance(triggerEl) || new bootstrap.Tab(triggerEl).show();
+            } else if (tabName === 'analytics') {
+                const triggerEl = document.querySelector('#adminTabs button[data-bs-target="#tab-analytics"]');
+                bootstrap.Tab.getInstance(triggerEl) || new bootstrap.Tab(triggerEl).show();
+            } else if (tabName === 'stats') {
+                const triggerEl = document.querySelector('#adminTabs button[data-bs-target="#tab-stats"]');
+                bootstrap.Tab.getInstance(triggerEl) || new bootstrap.Tab(triggerEl).show();
+                loadStats(); // Auto load if tab is active
+            }
+
+            // Also listen for tab switch to load data
+            const statsTabBtn = document.querySelector('#adminTabs button[data-bs-target="#tab-stats"]');
+            if (statsTabBtn) {
+                statsTabBtn.addEventListener('shown.bs.tab', function () {
+                    loadStats();
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

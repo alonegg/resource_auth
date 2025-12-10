@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlmodel
+jinja2
+python-multipart
+passlib[bcrypt]
+cryptography
+bcrypt==3.2.2
+httpx
+xmltodict

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ _('User Management - E-TRAP Admin') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/admin/dashboard">E-TRAP <small class="fw-light">{{ _('Admin Console') }}</small></a>
+            <div class="d-flex text-white align-items-center">
+                {% if user %}
+                <span class="me-3">Hi, {{ user.name }} (Admin)</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm">{{ _('Logout') }}</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-light p-3 min-vh-100">
+                <h5 class="mb-3">{{ _('Admin Console') }}</h5>
+                <div class="list-group mb-4">
+                    <a href="/admin/dashboard" class="list-group-item list-group-item-action">{{ _('Dashboard') }}</a>
+                    <a href="/admin/users" class="list-group-item list-group-item-action active">{{ _('User Management') }}</a>
+                    <a href="/admin/tools/decrypt" class="list-group-item list-group-item-action list-group-item-warning">{{ _('Decrypt Tool') }}</a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between mb-4">
+                    <h2>{{ _('User Management') }}</h2>
+                    <form class="d-flex" action="/admin/users" method="get">
+                        <input class="form-control me-2" type="search" name="search" placeholder="{{ _('Search name/ID/email') }}" value="{{ search }}">
+                        <button class="btn btn-outline-success" type="submit">{{ _('Search') }}</button>
+                    </form>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>{{ _('Name') }}</th>
+                                    <th>{{ _('UID') }}</th>
+                                    <th>{{ _('Email') }}</th>
+                                    <th>{{ _('Department') }}</th>
+                                    <th>{{ _('Role') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th>{{ _('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in users %}
+                                <tr>
+                                    <td>{{ u.id }}</td>
+                                    <td>{{ u.name }}</td>
+                                    <td>{{ u.swufe_uid }}</td>
+                                    <td>{{ u.email }}</td>
+                                    <td>{{ u.department }}</td>
+                                    <td>
+                                        {% if u.role == 'admin' %}
+                                        <span class="badge bg-danger">Admin</span>
+                                        {% else %}
+                                        <span class="badge bg-info">User</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if u.is_active %}
+                                        <span class="badge bg-success">{{ _('Active') }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ _('Disabled') }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="/admin/users/{{ u.id }}" class="btn btn-sm btn-primary">{{ _('Details') }}</a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">{{ _('No users found') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

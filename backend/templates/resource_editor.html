@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ _('Experimental Teaching Resource Authorization Platform') }} Resource Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-danger mb-4 shadow">
+        <div class="container">
+            <a class="navbar-brand" href="/admin/dashboard">{{ _('Experimental Teaching Resource Authorization Platform') }} <small>Admin</small></a>
+            <span class="text-white">{{ _('New Resource Wizard') }}</span>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0 h-100">
+            <!-- Sidebar: Wizard Steps -->
+            <div class="col-md-3 col-lg-2 d-none d-md-block bg-white border-end h-100 position-fixed" style="top: 56px; bottom: 0; z-index: 100; padding-top: 20px;">
+                <h6 class="px-3 text-muted text-uppercase small fw-bold mb-3">{{ _('Steps') }}</h6>
+                <div class="list-group list-group-flush" id="wizardSteps">
+                    <a href="#step1" class="list-group-item list-group-item-action border-0 active d-flex align-items-center" onclick="return false;" id="step1-tab">
+                        <span class="badge bg-primary rounded-circle me-2">1</span> {{ _('General Info') }}
+                    </a>
+                    <a href="#step2" class="list-group-item list-group-item-action border-0 disabled d-flex align-items-center" onclick="return false;" id="step2-tab">
+                        <span class="badge bg-secondary rounded-circle me-2">2</span> {{ _('Access Control') }}
+                    </a>
+                    <a href="#step3" class="list-group-item list-group-item-action border-0 disabled d-flex align-items-center" onclick="return false;" id="step3-tab">
+                        <span class="badge bg-secondary rounded-circle me-2">3</span> {{ _('Configuration') }}
+                    </a>
+                    <a href="#step4" class="list-group-item list-group-item-action border-0 disabled d-flex align-items-center" onclick="return false;" id="step4-tab">
+                        <span class="badge bg-secondary rounded-circle me-2">4</span> {{ _('Review') }}
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="col-md-9 col-lg-10 ms-auto p-4 p-lg-5" style="margin-top: 20px;">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                            <h2 class="h4 m-0">
+                                {% if resource %}
+                                {{ _('Edit Resource') }}: <span class="text-primary">{{ resource.name }}</span>
+                                {% else %}
+                                {{ _('Create New Resource') }}
+                                {% endif %}
+                            </h2>
+                            <a href="/admin/dashboard" class="btn btn-outline-secondary btn-sm">{{ _('Exit Wizard') }}</a>
+                        </div>
+
+                        <!-- Main Form -->
+                        <form id="wizardForm"
+                            action="{% if resource %}/admin/resources/{{ resource.id }}{% else %}/admin/resources{% endif %}"
+                            method="post" enctype="multipart/form-data">
+
+                            <div class="tab-content" id="wizardContent">
+                                <!-- Step 1: General Info -->
+                                <div class="tab-pane fade show active" id="step1" role="tabpanel">
+                                    <h5 class="mb-3 text-muted">{{ _('Step 1: Basic Information') }}</h5>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">{{ _('Resource Name') }} <span class="text-danger">*</span></label>
+                                            <input type="text" name="name" id="inputName" class="form-control form-control-lg"
+                                                placeholder="e.g. SAS Studio 2024"
+                                                value="{{ resource.name if resource else '' }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="resourceCategory" class="form-label fw-bold">{{ _('Category') }} <span class="text-danger">*</span></label>
+                                            <select name="category" id="resourceCategory" class="form-select form-select-lg" required
+                                                onchange="updateForm()">
+                                                <option value="" disabled {{ 'selected' if not resource else '' }}>{{ _('Select Category') }}</option>
+                                                <option value="Software" {{ 'selected' if resource and resource.category=='Software' else '' }}>{{ _('Software') }}</option>
+                                                <option value="Compute" {{ 'selected' if resource and resource.category=='Compute' else '' }}>{{ _('Compute') }}</option>
+                                                <option value="Data" {{ 'selected' if resource and resource.category=='Data' else '' }}>{{ _('Data') }}</option>
+                                                <option value="Teaching" {{ 'selected' if resource and resource.category=='Teaching' else '' }}>{{ _('Teaching') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">{{ _('Description / Introduction') }}</label>
+                                        <!-- Hidden input to sync content -->
+                                        <input type="hidden" name="description" id="hiddenDesc">
+                                        <!-- Quill Container -->
+                                        <div id="editor-container" style="height: 300px;">{{ resource.description|safe if resource else '' }}</div>
+                                    </div>
+                                    <div class="d-flex justify-content-end mt-4">
+                                        <button type="button" class="btn btn-primary btn-lg px-4" onclick="nextStep(2)">{{ _('Next Step') }} <i class="bi bi-arrow-right"></i></button>
+                                    </div>
+                                </div>
+
+
+                                <!-- Step 2: Access Control -->
+                                <div class="tab-pane fade" id="step2" role="tabpanel">
+                                    <h5 class="mb-3 text-muted">{{ _('Step 2: Access & Authorization') }}</h5>
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">{{ _('Valid Until (Expiry Date)') }} <span class="text-danger">*</span></label>
+                                            <input type="date" name="valid_until" id="inputValidUntil" class="form-control form-control-lg"
+                                                value="{{ resource.valid_until if resource else '' }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">{{ _('Authorization Type') }} <span class="text-danger">*</span></label>
+                                            <select name="auth_type" id="authTypeSelect" class="form-select form-select-lg"
+                                                onchange="updateForm()">
+                                                <option value="AUTO_ZIP" {% if resource and resource.auth_type=='AUTO_ZIP' %}selected{% endif %}>{{ _('Auto-Auth (ZIP Download)') }}</option>
+                                                <option value="AUTO_CODE" {% if resource and resource.auth_type=='AUTO_CODE' %}selected{% endif %}>{{ _('Auto-Auth (Code Display)') }}</option>
+                                                <option value="MANUAL" {% if resource and resource.auth_type=='MANUAL' %}selected{% endif %}>{{ _('Manual Approval') }}</option>
+                                                <option value="API_GATEWAY" {% if resource and resource.auth_type=='API_GATEWAY' %}selected{% endif %}>{{ _('API Gateway Proxy') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-5">
+                                        <button type="button" class="btn btn-outline-secondary btn-lg" onclick="prevStep(1)"><i class="bi bi-arrow-left"></i> {{ _('Previous') }}</button>
+                                        <button type="button" class="btn btn-primary btn-lg px-4" onclick="nextStep(3)">{{ _('Next Step') }} <i class="bi bi-arrow-right"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Step 3: Configuration -->
+                                <div class="tab-pane fade" id="step3" role="tabpanel">
+                                    <h5 class="mb-3 text-primary"><i class="bi bi-sliders"></i> {{ _('Configuration') }}</h5>
+                                    
+                                    <!-- Dynamic Sections (Software/Compute/API) -->
+                                    <!-- Scenario 1: Software Variants -->
+                                    <div id="config-software" class="config-section">
+                                        <div class="mb-3">
+                                            <select name="software_delivery" id="softwareDeliverySelect" class="form-select form-select-lg mb-3"
+                                                onchange="updateSoftwareConfig()">
+                                                <option value="FILE" {% if resource and resource.config.zip_path %}selected{% endif %}>{{ _('Installer Package (e.g. SAS)') }}</option>
+                                                <option value="CODE" {% if resource and resource.config.static_code %}selected{% endif %}>{{ _('License Code (e.g. Stata)') }}</option>
+                                                <option value="GUIDE" {% if resource and resource.config.instruction_text %}selected{% endif %}>{{ _('Instruction Guide (e.g. Matlab)') }}</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ _('Public Installer URL (All Software)') }}</label>
+                                            <input type="url" name="public_installer_url" class="form-control"
+                                                placeholder="http://cdn.edu/iso"
+                                                value="{{ resource.public_installer_url if resource and resource.public_installer_url else '' }}">
+                                        </div>
+
+                                        <!-- Sub-section: File -->
+                                        <div id="soft-file" class="soft-sub p-4 border rounded bg-light mb-3">
+                                            <div class="alert alert-info small py-2 mb-3"><strong>SAS/Mode:</strong> {{ _('Upload License/Auth ZIP. System injects Watermark.') }}</div>
+                                            {% if resource and resource.config.zip_path %}
+                                            <div class="mb-2">
+                                                <span class="badge bg-success">{{ _('File Exists') }}</span> <span
+                                                    class="small text-muted">{{ resource.config.zip_path }}</span>
+                                            </div>
+                                            {% endif %}
+                                            <label class="form-label small fw-bold">{{ _('Upload Auth/License ZIP') }}</label>
+                                            <input type="file" name="file_zip" class="form-control mb-2" accept=".zip">
+                                            <label class="form-label small fw-bold mt-2">{{ _('Inject Filename') }}</label>
+                                            <input type="text" name="inject_file" class="form-control"
+                                                value="{{ resource.config.inject_file if resource and resource.config.inject_file else 'license.dat' }}">
+                                            
+                                            <!-- Preview Container -->
+                                            <div id="preview-list-container"></div>
+                                        </div>
+
+                                        <!-- Sub-section: Code -->
+                                        <div id="soft-code" class="soft-sub p-4 border rounded bg-light mb-3 d-none">
+                                            <div class="alert alert-warning small py-2 mb-3"><strong>Stata/Mode:</strong> {{ _('Display Static Code after approval.') }}</div>
+                                            <label class="form-label fw-bold">{{ _('License Code / Key') }}</label>
+                                            
+                                            <!-- Hidden input to sync content -->
+                                            <input type="hidden" name="static_code" id="hiddenCode">
+                                            <!-- Quill Container -->
+                                            <div id="code-editor-container" class="bg-white" style="height: 150px; font-family: monospace;">{{ resource.config.static_code|safe if resource and resource.config.static_code else '' }}</div>
+                                        </div>
+
+                                        <!-- Sub-section: Guide -->
+                                        <div id="soft-guide" class="soft-sub p-4 border rounded bg-light mb-3 d-none">
+                                            <div class="alert alert-primary small py-2 mb-3"><strong>Matlab/Mode:</strong> {{ _('Display Instructions after approval.') }}</div>
+                                            <label class="form-label fw-bold">{{ _('Instruction Text') }}</label>
+                                            <!-- Hidden input to sync content -->
+                                            <input type="hidden" name="instruction_text" id="hiddenInstruction">
+                                            <!-- Quill Container -->
+                                            <div id="instruction-editor-container" style="height: 200px;">{{ resource.config.instruction_text|safe if resource and resource.config.instruction_text else '' }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Scenario 2: Compute (Norms) -->
+                                    <div id="config-compute" class="config-section d-none">
+                                        <div class="alert alert-danger small">
+                                            <strong>{{ _('Compute Mode:') }}</strong> {{ _('Users need to agree to usage norms.') }}
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ _('Usage Norms / Agreement') }}</label>
+                                            <textarea name="usage_norms" class="form-control"
+                                                rows="6">{{ resource.config.usage_norms if resource and resource.config.usage_norms else 'Please shut down instances after use. Do not mine crypto.' }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ _('Connection Info Template') }}</label>
+                                            <input type="text" name="connection_info" class="form-control"
+                                                value="{{ resource.config.connection_info if resource and resource.config.connection_info else 'ssh {user}@cluster.swufe.edu.cn -p {port}' }}">
+                                        </div>
+                                    </div>
+
+                                    <!-- Scenario 3: API (Quota) -->
+                                    <div id="config-api" class="config-section d-none">
+                                        <div class="alert alert-success small">
+                                            <strong>{{ _('API Mode:') }}</strong> {{ _('System manages token quota.') }}
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ _('Default Token Quota') }}</label>
+                                            <input type="number" name="quota" class="form-control"
+                                                value="{{ resource.config.quota if resource and resource.config.quota else 100000 }}">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ _('Upstream API Endpoint') }}</label>
+                                            <input type="url" name="upstream_url" class="form-control"
+                                                placeholder="https://api.openai.com/v1"
+                                                value="{{ resource.config.upstream_url if resource and resource.config.upstream_url else '' }}">
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="config-data" class="config-section d-none">
+                                        <div class="alert alert-secondary small">
+                                            <strong>{{ _('Data Mode:') }}</strong> {{ _('Manual approval for dataset access.') }}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between mt-5">
+                                        <button type="button" class="btn btn-outline-secondary btn-lg" onclick="prevStep(2)"><i class="bi bi-arrow-left"></i> {{ _('Previous') }}</button>
+                                        <button type="button" class="btn btn-primary btn-lg px-4" onclick="nextStep(4)">{{ _('Next Step') }} <i class="bi bi-arrow-right"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Step 4: Review -->
+                                <div class="tab-pane fade" id="step4" role="tabpanel">
+                                    <h5 class="mb-4 text-success"><i class="bi bi-check-circle-fill"></i> {{ _('Review & Submit') }}</h5>
+                                    
+                                    <div class="card bg-light border-0 mb-4">
+                                        <div class="card-body">
+                                            <dl class="row mb-0 lead" style="font-size: 1rem;">
+                                                <dt class="col-sm-3 text-muted">{{ _('Name') }}</dt>
+                                                <dd class="col-sm-9 fw-bold" id="reviewName">-</dd>
+                                                
+                                                <dt class="col-sm-3 text-muted">{{ _('Category') }}</dt>
+                                                <dd class="col-sm-9" id="reviewCategory">-</dd>
+                                                
+                                                <dt class="col-sm-3 text-muted">{{ _('Valid Until') }}</dt>
+                                                <dd class="col-sm-9" id="reviewValid">-</dd>
+                                                
+                                                <dt class="col-sm-3 text-muted">{{ _('Auth Type') }}</dt>
+                                                <dd class="col-sm-9" id="reviewAuth">-</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between mt-5">
+                                        <button type="button" class="btn btn-outline-secondary btn-lg" onclick="prevStep(3)"><i class="bi bi-arrow-left"></i> {{ _('Previous') }}</button>
+                                        <div>
+                                            <button type="button" class="btn btn-info btn-lg me-2 text-white" onclick="previewContent()"><i class="bi bi-eye"></i> {{ _('Preview Card') }}</button>
+                                            <button type="submit" class="btn btn-success btn-lg px-5" onclick="syncQuill()">{% if resource %}{{ _('Save Changes') }}{% else %}{{ _('Create Resource') }}{% endif %}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ _('Preview Resource Card') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <!-- Simulate Card -->
+                    <div class="card shadow-sm mx-auto" style="max-width: 400px;">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary" id="previewTitle">Resource Name</h5>
+                            <div class="card-text mb-3" id="previewDesc">Description...</div>
+                            <hr>
+                            <div class="alert alert-info p-2 mb-0" id="previewInstructionBox">
+                                <strong>Activation Guide:</strong><br>
+                                <div id="previewInstruction"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Init Quill
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            placeholder: '{{ _("Describe the resource features and version...") }}',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{ 'script': 'sub' }, { 'script': 'super' }],      // superscript/subscript
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+                    ['clean']                                         // remove formatting button
+                ]
+            }
+        });
+
+        // Init Quill for Instruction
+        var quillInst = new Quill('#instruction-editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+
+        // Init Quill for Code (Lightweight)
+        var quillCode = new Quill('#code-editor-container', {
+            theme: 'snow',
+            placeholder: '{{ _("Paste license key or code here...") }}',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    ['code-block'],
+                    ['clean']
+                ]
+            }
+        });
+
+        function syncQuill() {
+            var html = quill.root.innerHTML;
+            document.getElementById('hiddenDesc').value = html;
+
+            var htmlInst = quillInst.root.innerHTML;
+            document.getElementById('hiddenInstruction').value = htmlInst;
+            
+            // Sync Code
+            // Save HTML to support rich text formatting (bold, etc.)
+            var htmlCode = quillCode.root.innerHTML;
+            // If empty (just <p><br></p>), save empty
+            if (quillCode.getText().trim().length === 0) {
+                htmlCode = "";
+            }
+            document.getElementById('hiddenCode').value = htmlCode;
+        }
+
+        function previewContent() {
+            var name = document.querySelector('input[name="name"]').value;
+            var desc = quill.root.innerHTML;
+            var inst = quillInst.root.innerHTML;
+
+            document.getElementById('previewTitle').innerText = name || "Resource Name";
+            document.getElementById('previewDesc').innerHTML = desc;
+            document.getElementById('previewInstruction').innerHTML = inst;
+
+            var modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            modal.show();
+        }
+
+        function updateForm() {
+            const category = document.getElementById('resourceCategory').value;
+
+            // Hide all sections
+            document.querySelectorAll('.config-section').forEach(el => el.classList.add('d-none'));
+
+            // Logic based on category
+            if (category === 'Software') {
+                document.getElementById('config-software').classList.remove('d-none');
+                updateSoftwareConfig(); // Trigger sub-logic for software
+            } else if (category === 'Compute') {
+                document.getElementById('config-compute').classList.remove('d-none');
+            } else if (category === 'Data') {
+                document.getElementById('config-data').classList.remove('d-none');
+            } else if (category === 'Teaching') {
+                // Assuming Teaching might need specific config, or defaults to Data/Manual
+                document.getElementById('config-data').classList.remove('d-none');
+            } else {
+                // Default or other categories, e.g., if category is empty or unrecognized
+                document.getElementById('config-data').classList.remove('d-none');
+            }
+        }
+
+        function updateSoftwareConfig() {
+            const delivery = document.getElementById('softwareDeliverySelect').value;
+
+            // Hide all sub-sections
+            document.querySelectorAll('.soft-sub').forEach(el => el.classList.add('d-none'));
+
+            if (delivery === 'FILE') {
+                document.getElementById('soft-file').classList.remove('d-none');
+            } else if (delivery === 'CODE') {
+                document.getElementById('soft-code').classList.remove('d-none');
+            } else if (delivery === 'GUIDE') {
+                document.getElementById('soft-guide').classList.remove('d-none');
+            }
+        }
+
+        // Initial run
+        updateForm();
+
+        // AJAX Preview Logic for Zip Upload
+        const zipInput = document.querySelector('input[name="file_zip"]');
+        if (zipInput) {
+            zipInput.addEventListener('change', async function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Show Loading State
+                const previewContainer = document.getElementById('soft-file'); // Parent container
+                let listContainer = document.getElementById('preview-list-container');
+
+                // Create container if not exists (or clear it)
+                if (!listContainer) {
+                    listContainer = document.createElement('div');
+                    listContainer.id = 'preview-list-container';
+                    listContainer.className = 'mt-3';
+                    // Find where to insert: After the inject_file input
+                    const injectInput = document.querySelector('input[name="inject_file"]');
+                    injectInput.parentNode.insertBefore(listContainer, injectInput.nextSibling);
+                }
+
+                listContainer.innerHTML = `
+                    <label class="form-label small fw-bold">{{ _('Archive Preview (Unsaved)') }}</label>
+                    <div class="border rounded p-2 bg-white text-muted" style="font-size: 0.85em;">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> {{ _('Loading preview...') }}
+                    </div>
+                `;
+
+                try {
+                    const response = await fetch('/admin/tools/preview-zip', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) throw new Error("Preview failed");
+
+                    const data = await response.json();
+                    const files = data.files || [];
+
+                    let html = `
+                        <label class="form-label small fw-bold">{{ _('Archive Preview (Unsaved)') }}</label>
+                        <div class="border rounded p-2 bg-white" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em;">
+                            <ul class="list-unstyled mb-0">
+                    `;
+
+                    if (files.length === 0) {
+                        html += `<li class="text-muted">{{ _('Empty Archive') }}</li>`;
+                    } else {
+                        files.forEach(file => {
+                            const isDir = file.endsWith('/');
+                            const cls = isDir ? 'text-primary fw-bold' : '';
+                            html += `<li class="${cls}">${file}</li>`;
+                        });
+                    }
+                    html += `</ul></div>`;
+
+                    listContainer.innerHTML = html;
+
+                } catch (err) {
+                    console.error(err);
+                    listContainer.innerHTML = `
+                        <label class="form-label small fw-bold text-danger">{{ _('Preview Error') }}</label>
+                        <div class="alert alert-danger small py-1">${err.message}</div>
+                    `;
+                }
+            });
+        }
+
+        // Wizard Logic
+        function nextStep(step) {
+            // Validate previous step
+            if (step === 2) {
+                // Step 1 Validation
+                const nameValid = validateField('inputName');
+                const catValid = validateField('resourceCategory');
+                
+                if (!nameValid || !catValid) {
+                    // Focus on first invalid field
+                    if (!nameValid) document.getElementById('inputName').focus();
+                    else if (!catValid) document.getElementById('resourceCategory').focus();
+                    return;
+                }
+            }
+            if (step === 3) {
+                // Step 2 Validation
+                const dateValid = validateField('inputValidUntil');
+                const authValid = validateField('authTypeSelect');
+                
+                if (!dateValid || !authValid) {
+                     if (!dateValid) document.getElementById('inputValidUntil').focus();
+                     else if (!authValid) document.getElementById('authTypeSelect').focus();
+                     return;
+                }
+            }
+            if (step === 4) {
+                updateReview();
+            }
+            
+            showStep(step);
+        }
+
+        function prevStep(step) {
+            showStep(step);
+        }
+
+        function showStep(step) {
+            console.log("Showing step:", step);
+            try {
+                // Manually handle classes just in case bootstrap event is delayed or fails
+                document.querySelectorAll('.tab-pane').forEach(el => {
+                    el.classList.remove('show', 'active');
+                });
+                document.querySelector('#step' + step).classList.add('show', 'active');
+
+                // Enable/Disable Nav Items
+                document.querySelectorAll('#wizardSteps .list-group-item').forEach((el, index) => {
+                    if (index + 1 < step) {
+                        el.classList.add('text-success');
+                        el.classList.remove('disabled', 'active', 'text-muted');
+                        el.querySelector('.badge').classList.replace('bg-secondary', 'bg-success');
+                        el.querySelector('.badge').classList.replace('bg-primary', 'bg-success');
+                    } else if (index + 1 === step) {
+                        el.classList.add('active');
+                        el.classList.remove('disabled', 'text-success', 'text-muted');
+                        el.querySelector('.badge').classList.replace('bg-secondary', 'bg-primary');
+                        el.querySelector('.badge').classList.replace('bg-success', 'bg-primary');
+                    } else {
+                        el.classList.add('disabled', 'text-muted');
+                        el.classList.remove('active', 'text-success');
+                        el.querySelector('.badge').classList.replace('bg-primary', 'bg-secondary');
+                        el.querySelector('.badge').classList.replace('bg-success', 'bg-secondary');
+                    }
+                });
+            } catch (e) {
+                console.error("Tab switch error:", e);
+                alert("Navigation Error: " + e.message);
+            }
+        }
+
+        function validateField(id) {
+            var el = document.getElementById(id);
+            if (!el) return true; // Skip if element missing (shouldn't happen)
+            if (!el.value || el.value === "") {
+                el.classList.add('is-invalid');
+                return false;
+            } else {
+                el.classList.remove('is-invalid');
+                el.classList.add('is-valid');
+                return true;
+            }
+        }
+        
+        // Clear validation on input
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', () => {
+                el.classList.remove('is-invalid');
+                if(el.value) el.classList.add('is-valid');
+            });
+            el.addEventListener('change', () => {
+                el.classList.remove('is-invalid');
+                if(el.value) el.classList.add('is-valid');
+            });
+        });
+
+        function updateReview() {
+            document.getElementById('reviewName').innerText = document.getElementById('inputName').value;
+            var catSelect = document.getElementById('resourceCategory');
+            document.getElementById('reviewCategory').innerText = catSelect.options[catSelect.selectedIndex].text;
+            document.getElementById('reviewValid').innerText = document.getElementById('inputValidUntil').value;
+            var authSelect = document.getElementById('authTypeSelect');
+            document.getElementById('reviewAuth').innerText = authSelect.options[authSelect.selectedIndex].text;
+        }
+
+    </script>
+</body>
+
+</html>
