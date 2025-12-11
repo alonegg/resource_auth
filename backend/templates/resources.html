@@ -2,8 +2,9 @@
 <html>
 
 <head>
-    <title>{{ _('Experimental Teaching Resource Authorization Platform') }} Resources</title>
+    <title>{{ _('Experimental Teaching Resource Authorization Platform') }}<title>E-TRAP Resources</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
         :root {
             --card-border-radius: 12px;
@@ -114,10 +115,71 @@
             padding: 0.35em 0.65em;
             border-radius: 20px;
         }
+
+        .btn-guide {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border: 1px solid #e0e0e0;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 10px 15px;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 12px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .btn-guide:hover {
+            background: #fff;
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.15);
+            transform: translateY(-1px);
+            text-decoration: none;
+        }
+
+        .btn-guide i {
+            font-size: 1.1em;
+            margin-right: 6px;
+        }
+
+        /* Modal Styles */
+        .guide-content {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #333;
+        }
+        .guide-step {
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        /* Footer Styles */
+        .main-footer {
+            margin-top: 3rem;
+            padding: 2rem 0;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+        }
+        
+        .main-footer .institution {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        
+        .main-footer .contact {
+            font-size: 0.9rem;
+        }
     </style>
 </head>
-
-<body>
+<body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="#">{{ _('Experimental Teaching Resource Authorization Platform') }}</a>
@@ -163,28 +225,17 @@
                         <div class="action-area border-0 pt-0 mt-auto">
 
                         {% if resource.auth_type == 'AUTO_ZIP' %}
-                        <a href="/resources/{{ resource.id }}/download" class="btn btn-primary w-100">{{ _('Download
-                            License') }}</a>
+                        <a href="/resources/{{ resource.id }}/download" class="btn btn-primary w-100">{{ _('Download License') }}</a>
                         <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
                             app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
 
                         {% elif resource.auth_type == 'AUTO_CODE' %}
-                        <!-- Auto-Generated Code Mode -->
-                        <div class="alert alert-warning p-2 mb-0">
-                            <strong>{{ _('License Key') }}:</strong><br>
-                            <div class="input-group input-group-sm mt-1">
-                                <input type="text" class="form-control" value="{{ app_map[resource.id].auth_output.get('code', 'N/A') }}" readonly id="code-{{ resource.id }}">
-                                <button class="btn btn-outline-secondary" type="button" onclick="copyCode('code-{{ resource.id }}')">{{ _('Copy') }}</button>
-                            </div>
-                        </div>
+                        <!-- Auto-Generated Code Mode: Hidden on card, moved to guide -->
                         <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
                             app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
-                        {% if resource.config.instruction_text %}
-                        <a href="#" class="d-block mt-1 small" onclick='showDetails({{ resource.id }}, {{ resource.name|tojson|forceescape }}, {{ resource.config.instruction_text|tojson|forceescape }})'>{{ _('View Activation Guide') }}</a>
-                        {% endif %}
 
                         {% elif resource.config.static_code %}
-                        <!-- Stata/Code Mode -->
+                        <!-- Static Code Mode -->
                         <div class="alert alert-secondary p-2 mb-0">
                             <strong>{{ _('License Code') }}:</strong><br>
                             <code>{{ resource.config.static_code | safe }}</code>
@@ -192,17 +243,27 @@
                         <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
                             app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
 
-                        {% elif resource.config.instruction_text %}
-                        <!-- Matlab/Guide Mode -->
-                        <div class="alert alert-info p-2 mb-0">
-                            <strong>{{ _('Activation Guide') }}:</strong><br>
-                            <span style="white-space: pre-line;">{{ resource.config.instruction_text }}</span>
-                        </div>
-                        <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
-                            app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
-
                         {% elif resource.auth_type == 'MANUAL' %}
                         <div class="alert alert-success p-2 small">{{ _('Refer to email for access instructions.') }}</div>
+                        {% else %}
+                        <!-- Default Fallback -->
+                        <small class="text-muted d-block mt-2">{{ _('Expires') }}: {{
+                            app_map[resource.id].expired_at.strftime('%Y-%m-%d') }}</small>
+                        {% endif %}
+
+                        <!-- Unified Activation Guide Button -->
+                        {% set guide_text = resource.config.instruction_text or '' %}
+                        {% if resource.auth_type == 'AUTO_CODE' and app_map[resource.id].auth_output.get('code') %}
+                             {% set code = app_map[resource.id].auth_output.get('code', 'N/A') %}
+                             {% set guide_content = "<div class='alert alert-light border mb-4'><strong>" + _('License Key') + ":</strong><br><div class='input-group mt-2'><input type='text' class='form-control font-monospace' value='" + code + "' readonly id='modal-code-" + resource.id|string + "'><button class='btn btn-outline-secondary' onclick='copyCode(\"modal-code-" + resource.id|string + "\")'>" + _('Copy') + "</button></div></div><div class='guide-content'>" + guide_text + "</div>" %}
+                        {% else %}
+                             {% set guide_content = "<div class='guide-content'>" + guide_text + "</div>" %}
+                        {% endif %}
+
+                        {% if resource.config.instruction_text or resource.auth_type == 'AUTO_CODE' %}
+                        <button class="btn btn-guide" onclick='showDetails({{ resource.id }}, {{ resource.name|tojson|forceescape }}, {{ guide_content|tojson|forceescape }})'>
+                            <i class="bi bi-book"></i> {{ _('View Activation Guide') }}
+                        </button>
                         {% endif %}
                         </div>
                     </div>
@@ -356,8 +417,23 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="main-footer mt-auto">
+        <div class="container text-center">
+            <p class="institution mb-1">
+                {{ _('Footer Institution') }} @<span id="footerYear">2025</span>
+            </p>
+            <p class="contact mb-0">
+                {{ _('Footer Contact') }}
+            </p>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Set dynamic year
+        document.getElementById('footerYear').textContent = new Date().getFullYear();
+
         document.addEventListener('DOMContentLoaded', function () {
             const modalEl = document.getElementById('applyModal');
             const modal = new bootstrap.Modal(modalEl);

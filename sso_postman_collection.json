@@ -1,0 +1,72 @@
+{
+	"info": {
+		"_postman_id": "b7337c6a-4467-4284-8149-16075130768e",
+		"name": "RMS SSO Integration Tests",
+		"description": "Test collection for Resource Management System SSO integration endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Initiate Login (Redirects to CAS)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/caslogin",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"caslogin"
+					]
+				},
+				"description": "Initiates the SSO flow. Should respond with 302 Redirect to CAS."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Access Protected Resource (Unauthorized)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/protected",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"protected"
+					]
+				},
+				"description": "Attempts to access a protected resource without a session. Should return 401."
+			},
+			"response": []
+		},
+		{
+			"name": "3. Logout",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/logout",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"logout"
+					]
+				},
+				"description": "Logs out locally and redirects to CAS logout."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}

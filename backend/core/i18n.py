@@ -208,7 +208,9 @@ TRANSLATIONS = {
         "Preview Card": "预览卡片",
         "Save Changes": "保存更改",
         "Create Resource": "创建资源",
-        "Preview Resource Card": "预览资源卡片"
+        "Preview Resource Card": "预览资源卡片",
+        "Footer Institution": "教务处-实验教学管理中心",
+        "Footer Contact": "联系电话 028-87092348 颐德楼i507"
     },
     "en": {
         "Software": "Software",
@@ -383,7 +385,9 @@ TRANSLATIONS = {
         "Resource Name": "Resource Name",
         "Category": "Category",
         "Count": "Count",
-        "No data available": "No data available"
+        "No data available": "No data available",
+        "Footer Institution": "Dean's Office - Experimental Teaching Management Center",
+        "Footer Contact": "Contact: 028-87092348 Yide Building i507"
     }
 }
 
